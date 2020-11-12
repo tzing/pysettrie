@@ -2,12 +2,12 @@ import bisect
 import collections
 import typing
 
-__version__ = "0.2.0b0"
+__version__ = "0.2.0"
 __all__ = ["SetTrie", "SetTrieDict"]
 
 
-KT = typing.TypeVar("KT")
-VT = typing.TypeVar("VT")
+_KT = typing.TypeVar("_KT")
+_VT = typing.TypeVar("_VT")
 
 
 class SortedDict(collections.OrderedDict):
@@ -34,18 +34,18 @@ class SortedDict(collections.OrderedDict):
         self._klist.pop(bisect.bisect_left(self._klist, v))
 
 
-class SimpleNode(typing.Generic[KT]):
+class _SimpleNode(typing.Generic[_KT]):
     """Node object used by SetTrie. You probably don't need to use it from
     the outside.
     """
 
     __slots__ = ("children", "is_leaf", "data")
 
-    children: "typing.Dict[KT, SimpleNode[KT]]"
+    children: "typing.Dict[_KT, _SimpleNode[_KT]]"
     is_leaf: "bool"
-    data: "KT"
+    data: "_KT"
 
-    def __init__(self, data: "KT" = None):
+    def __init__(self, data: "_KT" = None):
         # child nodes a.k.a. children
         self.children = SortedDict()
 
@@ -83,28 +83,28 @@ class SimpleNode(typing.Generic[KT]):
         return hash(self.data)
 
 
-class ValueNode(SimpleNode, typing.Generic[KT, VT]):
+class _ValueNode(_SimpleNode, typing.Generic[_KT, _VT]):
     """Node with value."""
 
     __slots__ = ("value",)
 
-    children: "typing.Dict[KT, ValueNode[KT]]"
-    value: "VT"
+    children: "typing.Dict[_KT, _ValueNode[_KT]]"
+    value: "_VT"
 
-    def __init__(self, data: "KT" = None, value: "VT" = None):
+    def __init__(self, data: "_KT" = None, value: "_VT" = None):
         super().__init__(data)
         # the value associated to the key set if is_leaf ==
         # True, otherwise None
         self.value = None
 
 
-_T_NODE = typing.Union[SimpleNode, ValueNode]
-_T_KEYSET = typing.Tuple[KT]
-_T_KEYSET_COMPITABLE = typing.Iterable[KT]
-_T_KEY_ITER = typing.Iterator[KT]
+_T_NODE = typing.Union[_SimpleNode, _ValueNode]
+_T_KEYSET = typing.Tuple[_KT]
+_T_KEYSET_COMPITABLE = typing.Iterable[_KT]
+_T_KEY_ITER = typing.Iterator[_KT]
 
 
-class _SetTrie(typing.Generic[KT, VT]):
+class _SetTrie(typing.Generic[_KT, _VT]):
     """Abstracted set trie implement."""
 
     Node: "_T_NODE"
@@ -298,11 +298,11 @@ class _SetTrie(typing.Generic[KT, VT]):
             return recursive_del, node
 
 
-class SetTrie(_SetTrie, typing.MutableSet[KT]):
+class SetTrie(_SetTrie, typing.MutableSet[_KT]):
     """Set-trie container of sets for efficient supersets/subsets of a set
     over a set of sets queries."""
 
-    Node = SimpleNode
+    Node = _SimpleNode
 
     def __init__(self, iterable=None):
         self.root = self.Node()
@@ -332,12 +332,12 @@ class SetTrie(_SetTrie, typing.MutableSet[KT]):
             yield rset
 
 
-class SetTrieDict(_SetTrie, typing.MutableMapping[KT, VT]):
+class SetTrieDict(_SetTrie, typing.MutableMapping[_KT, _VT]):
     """Mapping container for efficient storage of key-value pairs where the keys
     are sets.  Uses efficient trie implementation. Supports querying for values
     associated to subsets or supersets of stored key sets."""
 
-    Node = ValueNode
+    Node = _ValueNode
 
     __marker = object()
 
@@ -350,24 +350,24 @@ class SetTrieDict(_SetTrie, typing.MutableMapping[KT, VT]):
     def __repr__(self):
         return f"<SetTrieDict with {len(self)} sets>"
 
-    def items(self) -> "typing.Generator[_T_KEYSET, VT]":
+    def items(self) -> "typing.Generator[_T_KEYSET, _VT]":
         for aset, node in self._iter(self.root, []):
             yield aset, node.value
 
-    def assign(self, akey: "_T_KEYSET_COMPITABLE", avalue: "VT") -> None:
+    def assign(self, akey: "_T_KEYSET_COMPITABLE", avalue: "_VT") -> None:
         self[akey] = avalue
 
-    def __setitem__(self, akey: "_T_KEYSET_COMPITABLE", avalue: "VT") -> None:
+    def __setitem__(self, akey: "_T_KEYSET_COMPITABLE", avalue: "_VT") -> None:
         node = self._add(self.root, self._to_keyset(akey))
         node.value = avalue
 
-    def get(self, akey: "_T_KEYSET_COMPITABLE", default=None) -> "VT":
+    def get(self, akey: "_T_KEYSET_COMPITABLE", default=None) -> "_VT":
         node = self._get(self.root, self._to_keyset(akey))
         if node is None or not node.is_leaf:
             return default
         return node.value
 
-    def __getitem__(self, akey: "_T_KEYSET_COMPITABLE") -> "VT":
+    def __getitem__(self, akey: "_T_KEYSET_COMPITABLE") -> "_VT":
         node = self._get(self.root, self._to_keyset(akey))
         if node is None or not node.is_leaf:
             return KeyError(akey)
@@ -378,7 +378,7 @@ class SetTrieDict(_SetTrie, typing.MutableMapping[KT, VT]):
         if not node:
             raise KeyError(akey)
 
-    def pop(self, akey: "_T_KEYSET_COMPITABLE", default: "VT" = __marker) -> "VT":
+    def pop(self, akey: "_T_KEYSET_COMPITABLE", default: "_VT" = __marker) -> "_VT":
         _, node = self._remove(self.root, self._to_keyset(akey))
         if node:
             return node.value
@@ -388,7 +388,7 @@ class SetTrieDict(_SetTrie, typing.MutableMapping[KT, VT]):
             return default
 
     def iter_supersets(self, aset):
-        # type: (_T_KEYSET_COMPITABLE) -> typing.Generator[typing.Tuple[_T_KEYSET, VT]]
+        # type: (_T_KEYSET_COMPITABLE) -> typing.Generator[typing.Tuple[_T_KEYSET, _VT]]
         """Visit each supersets of given aset in the trie."""
         for rset, node in self._iter_supersets(self.root, sorted(set(aset)), 0, []):
             yield rset, node.value
