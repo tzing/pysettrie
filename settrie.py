@@ -2,7 +2,7 @@ import bisect
 import collections
 import typing
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["SetTrie", "SetTrieDict"]
 
 
@@ -350,7 +350,7 @@ class SetTrieDict(_SetTrie, typing.MutableMapping[_KT, _VT]):
     def __repr__(self):
         return f"<SetTrieDict with {len(self)} sets>"
 
-    def items(self) -> "typing.Generator[_T_KEYSET, _VT]":
+    def items(self) -> "typing.Generator[typing.Tuple[_T_KEYSET, _VT]]":
         for aset, node in self._iter(self.root, []):
             yield aset, node.value
 
