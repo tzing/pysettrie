@@ -2,7 +2,7 @@ import bisect
 import collections
 import typing
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 __all__ = ["SetTrie", "SetTrieDict"]
 
 
@@ -165,7 +165,7 @@ class _SetTrie(typing.Generic[_KT, _VT]):
     @classmethod
     def _has_superset(cls, node, setarr, idx):
         """(internal) Used by has_superset."""
-        if idx > len(setarr) - 1:
+        if idx >= len(setarr):
             return True
         found = False
         for key, child in node.children.items():
@@ -180,9 +180,8 @@ class _SetTrie(typing.Generic[_KT, _VT]):
         return found
 
     @classmethod
-    def _iter_supersets(
-        cls, node: "_T_NODE", setarr: "_T_KEYSET", idx: "int", path: "list"
-    ) -> "typing.Generator[typing.Tuple[_T_KEYSET, _T_NODE]]":
+    def _iter_supersets(cls, node, setarr, idx, path):
+        # type: (_T_NODE, _T_KEYSET, int, list) -> typing.Generator[typing.Tuple[_T_KEYSET, _T_NODE]]
         """(internal) for yielding supersets of a given setarr."""
         if node.data is not None:
             path.append(node.data)
@@ -195,7 +194,7 @@ class _SetTrie(typing.Generic[_KT, _VT]):
                     break
                 if key == setarr[idx]:
                     yield from cls._iter_supersets(child, setarr, idx + 1, path)
-                elif key < setarr[idx]:
+                else:
                     yield from cls._iter_supersets(child, setarr, idx, path)
         else:
             # no more elements to find: just traverse this subtree to get
@@ -229,27 +228,25 @@ class _SetTrie(typing.Generic[_KT, _VT]):
             return True
 
     @classmethod
-    def _iter_subsets(
-        cls, node: "_T_NODE", setarr: "_T_KEYSET", idx: "int", path: "list"
-    ) -> "typing.Generator[typing.Tuple[_T_KEYSET, _T_NODE]]":
+    def _iter_subsets(cls, node, setarr, idx, path):
+        # type: (_T_NODE, _T_KEYSET, int, list) -> typing.Generator[typing.Tuple[_T_KEYSET, _T_NODE]]
         if node.data is not None:
             path.append(node.data)
         if node.is_leaf:
             yield tuple(path), node
-        for key, child in node.children.items():
-            if idx >= len(setarr):
-                break
-            if key == setarr[idx]:
-                yield from cls._iter_subsets(child, setarr, idx + 1, path)
-            else:
-                # advance in search set until we find child (or get to
-                # the end, or get to an element > child)
-                for jdx in range(idx + 1, len(setarr)):
-                    if key < setarr[jdx]:
-                        break
-                    if key == setarr[jdx]:
+
+        if idx < len(setarr):
+            data = setarr[idx]
+            for key, child in node.children.items():
+                if key == data:
+                    yield from cls._iter_subsets(child, setarr, idx + 1, path)
+                else:
+                    # advance in search set until we find child (or get to
+                    # the end, or get to an element > child)
+                    jdx = bisect.bisect_left(setarr, key, idx + 1)
+                    if jdx < len(setarr) and setarr[jdx] == key:
                         yield from cls._iter_subsets(child, setarr, jdx, path)
-                        break
+
         if node.data is not None:
             path.pop()
 

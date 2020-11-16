@@ -65,5 +65,5 @@ contains             1.0502 sec      8.6181 sec
 has_superset        14.8069 sec     17.7916 sec
 iter_supersets      26.9799 sec     29.9188 sec
 has_subset           9.4474 sec     81.0500 sec
-iter_subsets        73.0908 sec     75.4710 sec
+iter_subsets        70.0992 sec     75.4710 sec
 ```
