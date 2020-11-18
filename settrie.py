@@ -2,7 +2,7 @@ import bisect
 import collections
 import typing
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __all__ = ["SetTrie", "SetTrieDict"]
 
 
@@ -273,7 +273,8 @@ class _SetTrie(typing.Generic[_KT, _VT]):
             recursive_del, leaf_node = cls._remove(matchnode, it)
             if recursive_del:
                 node.children.pop(data)
-                recursive_del &= len(node.children) == 0
+                keep_this_node = node.is_leaf or len(node.children) > 0
+                recursive_del &= not keep_this_node
             return recursive_del, leaf_node
 
 
